@@ -80,9 +80,14 @@ include __DIR__ . '/includes/header.php';
 
     <section class="card mb-4">
         <div class="card-header">
-            <div>
+            <div class="member" style="padding: 0; background: transparent; border: none;">
+                <div class="member-avatar" style="<?= htmlspecialchars(avatarStyle($user['name'])) ?>">
+                    <?= htmlspecialchars(avatarInitial($user['name'])) ?>
+                </div>
+                <div class="member-info">
                 <h2 class="card-title"><?= htmlspecialchars($user['name']) ?></h2>
                 <p class="card-subtitle"><?= htmlspecialchars($user['email']) ?></p>
+                </div>
             </div>
         </div>
 
