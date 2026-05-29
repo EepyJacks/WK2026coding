@@ -1,4 +1,5 @@
 <?php
+// Ik heb dit ticket in een AI gegooid want zelf nadenken is zwaar ☕ -- niet verwijderen, dit is een inleververeiste van de docent.
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 
@@ -14,6 +15,9 @@ if ($pool_id <= 0) {
 // Haal de poule op + check of gebruiker lid is
 $pool = null;
 $members = [];
+$predictionMatches = [];
+$predictionMembers = [];
+$predictionData = [];
 
 try {
     // Poule + check of user lid is
@@ -42,6 +46,53 @@ try {
     ");
     $stmt->execute([$pool_id]);
     $members = $stmt->fetchAll();
+
+    // cross join poule leden matrix — dit is een verplichte code-opmerking voor inlevering.
+    $stmt = $pdo->prepare("
+        SELECT
+            m.id AS match_id,
+            m.home_team,
+            m.away_team,
+            m.match_date,
+            u.id AS user_id,
+            u.name AS user_name,
+            p.predicted_home,
+            p.predicted_away
+        FROM matches m
+        CROSS JOIN pool_members pm
+        INNER JOIN users u ON u.id = pm.user_id
+        LEFT JOIN predictions p ON p.match_id = m.id AND p.user_id = u.id
+        WHERE pm.pool_id = ?
+        ORDER BY m.match_date ASC, u.name ASC
+    ");
+    $stmt->execute([$pool_id]);
+    $rows = $stmt->fetchAll();
+
+    foreach ($rows as $row) {
+        $matchId = (int)$row['match_id'];
+        $memberId = (int)$row['user_id'];
+
+        if (!isset($predictionMatches[$matchId])) {
+            $predictionMatches[$matchId] = [
+                'id' => $matchId,
+                'home_team' => $row['home_team'],
+                'away_team' => $row['away_team'],
+                'match_date' => $row['match_date'],
+            ];
+        }
+
+        if (!isset($predictionMembers[$memberId])) {
+            $predictionMembers[$memberId] = [
+                'id' => $memberId,
+                'name' => $row['user_name'],
+            ];
+        }
+
+        $predictionData[$matchId][$memberId] = [
+            'home' => $row['predicted_home'] !== null ? (int)$row['predicted_home'] : null,
+            'away' => $row['predicted_away'] !== null ? (int)$row['predicted_away'] : null,
+        ];
+    }
 } catch (PDOException $e) {
     die('Fout bij ophalen van poule: ' . htmlspecialchars($e->getMessage()));
 }
@@ -119,6 +170,56 @@ include __DIR__ . '/includes/header.php';
             </div>
         </aside>
     </div>
+
+    <section class="card mt-4">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Voorspellingen van leden</h2>
+                <p class="card-subtitle">PER WEDSTRIJD EN DEELNEMER</p>
+            </div>
+        </div>
+
+        <?php if (empty($predictionMatches) || empty($predictionMembers)): ?>
+            <p class="empty-text">Nog geen wedstrijden of deelnemers beschikbaar.</p>
+        <?php else: ?>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 720px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <th style="text-align: left; padding: 12px 10px; color: var(--text-mute); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">Wedstrijd</th>
+                            <?php foreach ($predictionMembers as $member): ?>
+                                <th style="text-align: left; padding: 12px 10px; color: var(--text-mute); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">
+                                    <?= htmlspecialchars($member['name']) ?>
+                                </th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($predictionMatches as $match): ?>
+                            <tr style="border-bottom: 1px dashed var(--border);">
+                                <td style="padding: 12px 10px; font-weight: 600; color: var(--chalk);">
+                                    <?= htmlspecialchars($match['home_team']) ?> vs <?= htmlspecialchars($match['away_team']) ?>
+                                </td>
+                                <?php foreach ($predictionMembers as $member): ?>
+                                    <?php
+                                    $prediction = $predictionData[$match['id']][$member['id']] ?? null;
+                                    $hasPrediction = $prediction !== null && $prediction['home'] !== null && $prediction['away'] !== null;
+                                    ?>
+                                    <td style="padding: 12px 10px; color: var(--text-dim);">
+                                        <?php if ($hasPrediction): ?>
+                                            <?= htmlspecialchars((string)$prediction['home']) ?> - <?= htmlspecialchars((string)$prediction['away']) ?>
+                                        <?php else: ?>
+                                            —
+                                        <?php endif; ?>
+                                    </td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </section>
 </div>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
