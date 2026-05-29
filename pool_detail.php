@@ -133,8 +133,8 @@ include __DIR__ . '/includes/header.php';
             <div class="member-list">
                 <?php foreach ($members as $member): ?>
                     <div class="member">
-                        <div class="member-avatar">
-                            <?= strtoupper(substr(htmlspecialchars($member['name']), 0, 1)) ?>
+                        <div class="member-avatar" style="<?= htmlspecialchars(avatarStyle($member['name'])) ?>">
+                            <?= htmlspecialchars(avatarInitial($member['name'])) ?>
                         </div>
                         <div class="member-info">
                             <div class="member-name"><?= htmlspecialchars($member['name']) ?></div>
