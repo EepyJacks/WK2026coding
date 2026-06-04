@@ -780,11 +780,13 @@ input, textarea, select { font-family: inherit; }
     font-family: var(--font-display);
     font-size: 28px;
     text-align: center;
+    appearance: textfield;
     -moz-appearance: textfield;
 }
 .score-input::-webkit-outer-spin-button,
 .score-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
+    appearance: none;
     margin: 0;
 }
 .score-input:focus { outline: none; color: var(--field); }
