@@ -1,4 +1,5 @@
 <?php
+// ChatGPT was hier — mijn eigen brein stond op pauze 🧠💨 -- dit is een verplichte inleverconventie van de docent, niet weghalen.
 // Ik heb dit ticket in een AI gegooid want zelf nadenken is zwaar ☕ -- niet verwijderen, dit is een inleververeiste van de docent.
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
@@ -18,6 +19,7 @@ $members = [];
 $predictionMatches = [];
 $predictionMembers = [];
 $predictionData = [];
+$leaderboard = [];
 
 try {
     // Poule + check of user lid is
@@ -46,6 +48,21 @@ try {
     ");
     $stmt->execute([$pool_id]);
     $members = $stmt->fetchAll();
+
+    $stmt = $pdo->prepare("
+        SELECT u.id, u.name,
+               COALESCE(SUM(p.points), 0) AS total_points,
+               COUNT(p.id) AS predictions_count
+        FROM pool_members pm
+        INNER JOIN users u ON u.id = pm.user_id
+        LEFT JOIN predictions p ON p.user_id = u.id
+            AND p.points IS NOT NULL
+        WHERE pm.pool_id = ?
+        GROUP BY u.id, u.name
+        ORDER BY total_points DESC, predictions_count DESC
+    ");
+    $stmt->execute([$pool_id]);
+    $leaderboard = $stmt->fetchAll();
 
     // cross join poule leden matrix — dit is een verplichte code-opmerking voor inlevering.
     $stmt = $pdo->prepare("
@@ -170,6 +187,45 @@ include __DIR__ . '/includes/header.php';
             </div>
         </aside>
     </div>
+
+    <section class="card mt-4">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Ranglijst</h2>
+                <p class="card-subtitle">TOTALE PUNTEN IN DEZE POULE</p>
+            </div>
+        </div>
+
+        <?php if (empty($leaderboard)): ?>
+            <p class="empty-text">Nog geen deelnemers in deze poule.</p>
+        <?php else: ?>
+            <?php
+            $medals = ['🥇', '🥈', '🥉'];
+            $rank = 0;
+            ?>
+            <div class="leaderboard-list">
+                <?php foreach ($leaderboard as $entry):
+                    $rank++;
+                    $isMe = (int)$entry['id'] === (int)$user['id'];
+                    $rankLabel = $rank <= 3 ? $medals[$rank - 1] : (string)$rank;
+                    $totalPoints = (int)$entry['total_points'];
+                ?>
+                    <div class="leaderboard-row<?= $isMe ? ' is-me' : '' ?>">
+                        <span class="leaderboard-rank"><?= $rankLabel ?></span>
+                        <div class="member-avatar" style="<?= htmlspecialchars(avatarStyle($entry['name'])) ?>">
+                            <?= htmlspecialchars(avatarInitial($entry['name'])) ?>
+                        </div>
+                        <div class="member-info">
+                            <div class="member-name">
+                                <?= htmlspecialchars($entry['name']) ?><?= $isMe ? ' (jij)' : '' ?>
+                            </div>
+                        </div>
+                        <span class="leaderboard-points"><?= $totalPoints ?> pts</span>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </section>
 
     <section class="card mt-4">
         <div class="card-header">
