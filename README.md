@@ -64,7 +64,30 @@ Je zou nu de homepage moeten zien. Als je een **403 Forbidden** foutmelding krij
 | `pools` | Aangemaakte poules | `id`, `name`, `access_code`, `created_by` |
 | `pool_members` | Wie zit in welke poule | `pool_id`, `user_id` |
 | `matches` | Wedstrijden (al gevuld) | `id`, `home_team`, `away_team`, `match_date` |
-| `predictions` | Voorspellingen van gebruikers | `user_id`, `match_id`, `predicted_home`, `predicted_away` |
+| `predictions` | Voorspellingen van gebruikers | `user_id`, `match_id`, `predicted_home`, `predicted_away`, `points` |
+
+### Puntentelling
+
+Punten worden per voorspelling berekend zodra een wedstrijd een officiële uitslag heeft (`matches.home_score` / `away_score`). De waarde wordt opgeslagen in `predictions.points` (kolom `TINYINT`, standaard `NULL` tot de wedstrijd is afgelopen).
+
+| Regel | Punten |
+|---|---|
+| Exacte uitslag geraden | **3** |
+| Goede winnaar + juist doelsaldo | **2** |
+| Alleen goede winnaar / gelijkspel | **1** |
+| Geen van bovenstaande | **0** |
+
+Doelsaldo = thuisscore − uitscore (bijv. 3–1 → +2, 1–1 → 0).
+
+De berekening zit in `includes/helpers.php`:
+
+```php
+require_once __DIR__ . '/includes/helpers.php';
+
+$points = calculatePoints($realHome, $realAway, $predHome, $predAway);
+```
+
+**Bestaande database bijwerken:** importeer opnieuw `database.sql` (leegt de database) of voer `sql/add_points_column.sql` uit in phpMyAdmin.
 
 **Slimme zaken in de database (die je moet benutten):**
 - `users.email` heeft een `UNIQUE` constraint — duplicaten worden automatisch geweigerd
