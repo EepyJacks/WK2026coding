@@ -30,6 +30,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                     <a href="pools.php"      class="nav-link <?= $currentPage === 'pools.php'       ? 'is-active' : '' ?>">Poules</a>
                     <a href="predictions.php" class="nav-link <?= $currentPage === 'predictions.php' ? 'is-active' : '' ?>">Voorspellingen</a>
                     <a href="profile.php"    class="nav-link <?= $currentPage === 'profile.php'     ? 'is-active' : '' ?>">Profiel</a>
+                    <?php if ((int)$user['id'] === 1): ?>
+                        <a href="admin_scores.php" class="nav-link <?= $currentPage === 'admin_scores.php' ? 'is-active' : '' ?>">Admin</a>
+                    <?php endif; ?>
                     <div class="user-menu">
                         <span class="user-chip">
                             <span class="user-avatar" style="<?= htmlspecialchars(avatarStyle($user['name'])) ?>">
